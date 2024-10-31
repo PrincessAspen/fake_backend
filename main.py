@@ -6,7 +6,8 @@ from sqlmodel import Session, select
 from db import get_session
 from models.product import Product
 from models.category import Category
-from typing import List
+from typing import List, Annotated
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 app = FastAPI()
 
@@ -30,6 +31,10 @@ def root():
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
+def check_current_credentials(credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())]):
+    token = credentials.credentials
+
+    print(f"Token is {token}")
 # Endpoint to list all products
 @app.get("/products")
 def list_products(session: Session = Depends(get_session)):
@@ -75,8 +80,8 @@ def get_category_products(category_name: str, session: Session = Depends(get_ses
 
 # Endpoint to create a new product
 @app.post("/create/product")
-def create_product(name: str, price: str, quality: str, summary: str, image: str = None, session: Session = Depends(get_session)):
-    product = Product(name=name, price=price, quality=quality, summary=summary, image=image)
+def create_product(name: str, price: str, quality: str, summary: str, image: str = None, category_id: int = None, session: Session = Depends(get_session)):
+    product = Product(name=name, price=price, quality=quality, summary=summary, image=image, category_id=category_id)
     session.add(product)
     session.commit()
     session.refresh(product)
