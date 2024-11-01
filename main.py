@@ -1,4 +1,6 @@
 import uvicorn
+import jwt
+from typing import List, Annotated
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,8 +8,8 @@ from sqlmodel import Session, select
 from db import get_session
 from models.product import Product
 from models.category import Category
-from typing import List, Annotated
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from config import SUPABASE_SECRET_KEY, JWT_ALGORITHM   
 
 app = FastAPI()
 
@@ -30,11 +32,20 @@ def root():
     return {"message": "Hello World"}
 
 app.mount("/images", StaticFiles(directory="images"), name="images")
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, SUPABASE_SECRET_KEY,
+                             audience=["authenticated"],
+                             algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 def check_current_credentials(credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())]):
     token = credentials.credentials
 
-    print(f"Token is {token}")
 # Endpoint to list all products
 @app.get("/products")
 def list_products(session: Session = Depends(get_session)):
@@ -80,7 +91,20 @@ def get_category_products(category_name: str, session: Session = Depends(get_ses
 
 # Endpoint to create a new product
 @app.post("/create/product")
-def create_product(name: str, price: str, quality: str, summary: str, image: str = None, category_id: int = None, session: Session = Depends(get_session)):
+def create_product( credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())], name: str, price: str, quality: str, summary: str, image: str = None, category_id: int = None, session: Session = Depends(get_session)):
+    if not credentials:
+        raise HTTPException(status_code=403, detail="Not Authorized")
+    
+    token = credentials.credentials
+    
+    if not token:
+        raise HTTPException(status_code=403, detail="Not Authorized")
+    
+    is_valid = verify_token(token)
+
+    if not is_valid:
+        raise HTTPException(status_code=403, detail="Not Authorized")
+    
     product = Product(name=name, price=price, quality=quality, summary=summary, image=image, category_id=category_id)
     session.add(product)
     session.commit()
