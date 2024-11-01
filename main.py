@@ -1,7 +1,7 @@
 import uvicorn
 import jwt
 from typing import List, Annotated
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
@@ -91,7 +91,7 @@ def get_category_products(category_name: str, session: Session = Depends(get_ses
 
 # Endpoint to create a new product
 @app.post("/create/product")
-def create_product( credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())], name: str, price: str, quality: str, summary: str, image: str = None, category_id: int = None, session: Session = Depends(get_session)):
+def create_product(name: Annotated[str, Form()], price: Annotated[str, Form()], quality: Annotated[str, Form()], summary: Annotated[str, Form()], image: Annotated[str, Form()], category_id: Annotated[int, Form()], credentials: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())], session: Session = Depends(get_session)):
     if not credentials:
         raise HTTPException(status_code=403, detail="Not Authorized")
     
