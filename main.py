@@ -1,7 +1,7 @@
 import uvicorn
 import jwt
 from typing import List, Annotated
-from fastapi import FastAPI, Depends, HTTPException, Form
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from config import SUPABASE_SECRET_KEY, JWT_ALGORITHM   
 
 app = FastAPI()
+router = APIRouter()
 
 origins = [
     'http://localhost',
@@ -121,7 +122,7 @@ def create_category(name: str, session: Session = Depends(get_session)):
     return {"category": category}
 
 # Endpoint to update an existing product
-@app.put("/update/product/{id}")
+@app.put("/update/class/{id}")
 def update_product(id: int, name: str, price: str, quality: str, summary: str, image: str, session: Session = Depends(get_session)):
     product = session.get(Product, id)
     if not product:
